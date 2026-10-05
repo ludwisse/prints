@@ -3,6 +3,7 @@ import sys
 
 import numpy as np
 import pytest
+import trimesh
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 import drzadlo_tyc as t  # noqa: E402
@@ -157,3 +158,95 @@ def test_dalsi_velikosti(velikost):
     assert m.extents[0] == pytest.approx(p.delka, abs=0.05)
     assert t.prevesy(m)[1] == 0.0
     assert m.bounds[1][2] == pytest.approx(p.vyska - p.h_kapsa + p.v_trn)
+
+
+# --- duté varianty (pro tisk se 100% výplní) -------------------------------------------------
+
+@pytest.fixture(scope="module")
+def dute():
+    p = t.VELIKOSTI["M_dute"]
+    return p, t.vyrob(p)
+
+
+def test_dute_ma_dve_uzavrene_komory(dute):
+    p, m = dute
+    casti = m.split(only_watertight=False)
+    kladne = [c for c in casti if c.volume > 0]
+    zaporne = [c for c in casti if c.volume < 0]
+    assert m.is_watertight and len(kladne) == 1 and len(zaporne) == 2
+    assert all(-c.volume / 1000 > 10 for c in zaporne)               # každá komora > 10 ml
+
+
+def test_dute_je_lehci_nez_plne(dute):
+    _, m = dute
+    plne = t.vyrob(t.VELIKOSTI["M"])
+    assert m.volume < 0.8 * plne.volume
+
+
+def test_dute_stena_je_aspon_3_9_mm(dute):
+    p, m = dute
+    vnejsi = t.vnejsi_sit(m)
+    komory_ = [c for c in m.split(only_watertight=False) if c.volume < 0]
+    for k in komory_:
+        hloubka = trimesh.proximity.signed_distance(vnejsi, k.vertices)     # kladná = uvnitř tyče
+        assert hloubka.min() > p.stena_dutiny - 0.1
+
+
+def test_dute_plny_blok_kolem_trnu_zustava_plny(dute):
+    p, m = dute
+    body = np.array([[0, 0, 15.0], [0, 8, 10.0], [0, -8, 20.0], [p.r_sloup - 1.0, 0, 15.0], [-(p.r_sloup - 1.0), 0, 15.0]])
+    assert m.contains(body).all()
+    # a komory jsou mimo: uprostřed komory vlevo není materiál
+    assert not m.contains([[-(p.r_sloup + 8.0), 0, 15.0]])[0]
+
+
+def test_dute_stropy_komor_jsou_primostitelne(dute):
+    _, m = dute
+    sirka, plocha_sikma = t.prevesy_vnitrni(m)
+    assert 0 < sirka <= 16.0                 # plochá střecha, přemostění do 16 mm
+    assert plocha_sikma == 0.0               # ostatní vnitřní převisy jsou ≤ 45°
+
+
+def test_dute_vnejsi_tvar_nema_previsy(dute):
+    _, m = dute
+    assert t.prevesy(m)[1] == 0.0
+
+
+def test_dute_trn_a_kapsa_jsou_stejne_jako_u_plne(dute):
+    p, m = dute
+    plne = t.vyrob(t.VELIKOSTI["M"])
+    assert m.bounds[1][2] == pytest.approx(plne.bounds[1][2])
+    assert m.extents == pytest.approx(plne.extents)
+    z_hlava = p.vyska - p.h_kapsa + p.v_trn
+    horni = m.vertices[np.isclose(m.vertices[:, 2], z_hlava, atol=1e-6)]
+    assert np.hypot(horni[:, 0], horni[:, 1]).max() == pytest.approx(p.d_trn / 2 - p.srazeni, abs=0.001)
+
+
+def test_dute_posun_trnu_posunuje_i_sloup():
+    p = t.replace(t.VELIKOSTI["M_dute"], x_trn=10.0)
+    m = t.vyrob(p)
+    assert m.is_watertight
+    assert m.contains([[10.0 + p.r_sloup - 1.0, 0, 15.0], [10.0 - (p.r_sloup - 1.0), 0, 15.0]]).all()
+
+
+def test_dute_prilis_tenka_stena_je_odmitnuta():
+    with pytest.raises(ValueError):
+        t.vyrob(t.replace(t.VELIKOSTI["M_dute"], stena_dutiny=2.0))
+
+
+def test_dute_prilis_siroka_strecha_je_odmitnuta():
+    with pytest.raises(ValueError):
+        t.vyrob(t.replace(t.VELIKOSTI["M_dute"], pol_strecha=9.0))
+
+
+def test_dute_prilis_kratky_sloup_je_odmitnut():
+    with pytest.raises(ValueError):
+        t.vyrob(t.replace(t.VELIKOSTI["M_dute"], r_sloup=10.0))
+
+
+@pytest.mark.parametrize("klic", ["S_dute", "L_dute"])
+def test_dute_dalsi_velikosti(klic):
+    m = t.vyrob(t.VELIKOSTI[klic])
+    assert m.is_watertight
+    assert len([c for c in m.split(only_watertight=False) if c.volume < 0]) == 2
+    assert t.prevesy(m)[1] == 0.0
