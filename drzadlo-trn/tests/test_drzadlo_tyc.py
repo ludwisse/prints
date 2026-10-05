@@ -16,29 +16,59 @@ def tvar():
 
 # --- rozměry zadání ------------------------------------------------------------------------
 
-def test_trn_prumer_9_a_vyska_12_nad_spodkem(tvar):
+def test_trn_prumer_15_6_a_delka_8_od_dna_kapsy(tvar):
     p, m = tvar
-    assert m.bounds[1][2] == pytest.approx(p.vyska + 12.0)
-    sek = m.section(plane_origin=[0, 0, p.vyska + 6.0], plane_normal=[0, 0, 1])
+    z_dno = p.vyska - p.h_kapsa
+    assert m.bounds[1][2] == pytest.approx(z_dno + p.v_trn)
+    sek = m.section(plane_origin=[0, 0, z_dno + 4.0], plane_normal=[0, 0, 1])
     v = sek.vertices
-    assert np.hypot(v[:, 0], v[:, 1]).max() == pytest.approx(4.5, abs=0.001)
-    assert v[:, 1].max() - v[:, 1].min() == pytest.approx(9.0, abs=0.01)
+    assert np.hypot(v[:, 0], v[:, 1]).max() == pytest.approx(p.d_trn / 2, abs=0.001)
+    assert v[:, 1].max() - v[:, 1].min() == pytest.approx(p.d_trn, abs=0.01)
 
 
 def test_hlava_trnu_je_plochá_se_srazenou_hranou(tvar):
     p, m = tvar
-    z_hlava = p.vyska + p.v_trn
+    z_hlava = p.vyska - p.h_kapsa + p.v_trn
     horni = m.vertices[np.isclose(m.vertices[:, 2], z_hlava, atol=1e-6)]
     assert len(horni) > 10
-    assert np.hypot(horni[:, 0], horni[:, 1]).max() == pytest.approx(4.5 - p.srazeni, abs=0.001)
+    assert np.hypot(horni[:, 0], horni[:, 1]).max() == pytest.approx(p.d_trn / 2 - p.srazeni, abs=0.001)
     pod = m.vertices[np.isclose(m.vertices[:, 2], z_hlava - p.srazeni, atol=1e-6)]
-    assert np.hypot(pod[:, 0], pod[:, 1]).max() == pytest.approx(4.5, abs=0.001)
+    assert np.hypot(pod[:, 0], pod[:, 1]).max() == pytest.approx(p.d_trn / 2, abs=0.001)
 
 
 def test_pata_trnu_je_zaoblena(tvar):
     p, m = tvar
-    sek = m.section(plane_origin=[0, 0, p.vyska + 0.2], plane_normal=[0, 0, 1])
-    assert np.hypot(sek.vertices[:, 0], sek.vertices[:, 1]).max() > 4.9
+    sek = m.section(plane_origin=[0, 0, p.vyska - p.h_kapsa + 0.1], plane_normal=[0, 0, 1])
+    assert np.hypot(sek.vertices[:, 0], sek.vertices[:, 1]).max() > p.d_trn / 2 + 0.8     # fillet R1,2 rozšiřuje trn u dna
+
+
+def test_kapsa_kolem_trnu_ma_prumer_a_hloubku(tvar):
+    p, m = tvar
+    z_dno = p.vyska - p.h_kapsa
+    # těsně nad dnem je kapsa: průřez vnějším obrysem kapsy má poloměr d_kapsa / 2
+    sek = m.section(plane_origin=[0, 0, z_dno + 0.8], plane_normal=[0, 0, 1])
+    r = np.hypot(sek.vertices[:, 0], sek.vertices[:, 1])
+    kolem_kapsy = r[(r > p.d_trn / 2 + 2.0) & (r < 15.0)]                  # jen obrys kapsy, ne vnější obrys tyče
+    assert len(kolem_kapsy) > 10
+    assert kolem_kapsy.max() < p.d_kapsa / 2 + p.sraz_kapsa + 0.01
+    assert kolem_kapsy.min() == pytest.approx(p.d_kapsa / 2, abs=0.01)
+    # dno kapsy je vodorovné: v z = dno jsou body mezi trnem a stěnou kapsy
+    dno = m.vertices[np.isclose(m.vertices[:, 2], z_dno, atol=1e-6)]
+    rd = np.hypot(dno[:, 0], dno[:, 1])
+    assert rd.max() == pytest.approx(p.d_kapsa / 2, abs=0.01)
+
+
+def test_pro_dilu_se_zavitem_je_misto_v_kapse(tvar):
+    p, _ = tvar
+    assert p.d_kapsa > 20.6 + 0.4                       # díl Ø ≈ 20,6 mm + vůle
+    assert p.d_trn < 15.8                               # krček horní části ≈ 15,8 mm: trn je o vůli menší
+    assert p.v_trn < 8.8                                # trn nesmí dosednout na dno otvoru
+
+
+def test_bearing_prstenec_mezi_trnem_a_stenou_dilu(tvar):
+    p, _ = tvar
+    sirka = (20.6 - p.d_trn) / 2
+    assert sirka > 2.0                                  # zoubky dosedají na prstenec široký asi 2,5 mm
 
 
 def test_rozmery_tyce(tvar):
@@ -46,7 +76,7 @@ def test_rozmery_tyce(tvar):
     assert m.extents[0] == pytest.approx(p.delka, abs=0.05)
     assert m.extents[1] == pytest.approx(p.hloubka, abs=0.05)
     assert m.bounds[0][2] == pytest.approx(0.0, abs=1e-9)                       # dlaň na stole
-    assert m.bounds[1][2] == pytest.approx(p.vyska + p.v_trn)
+    assert m.bounds[1][2] == pytest.approx(p.vyska - p.h_kapsa + p.v_trn)
 
 
 def test_trn_je_uprostred_tyce_a_posun_funguje(tvar):
@@ -60,10 +90,11 @@ def test_trn_je_uprostred_tyce_a_posun_funguje(tvar):
 
 def test_spodek_je_rovny_kolem_trnu(tvar):
     p, m = tvar
-    # v z = vyska je plochý pruh široký 2 * (hloubka/2 - r_spodek)
+    # v z = vyska je plochý pruh široký 2 * (hloubka/2 - r_spodek); kapsa z něj vyřízla kruh
     na_spodku = m.vertices[np.isclose(m.vertices[:, 2], p.vyska, atol=1e-6)]
     assert len(na_spodku) > 10
     assert np.abs(na_spodku[:, 1]).max() == pytest.approx(p.hloubka / 2 - p.r_spodek, abs=0.01)
+    assert (p.hloubka - 2 * p.r_spodek) >= p.d_kapsa + 2 * p.sraz_kapsa + 3.0           # kolem kapsy zbývá rovná plocha
 
 
 # --- kvalita a tisk ----------------------------------------------------------------------
@@ -99,13 +130,18 @@ def test_dlan_plocha_na_stole_je_dost_siroka(tvar):
 
 def test_pulprofil_zacina_a_konci_na_ose():
     pul = t.pulprofil(t.Parametry())
-    assert pul[0] == pytest.approx([0, 0]) and pul[-1] == pytest.approx([0, 28.0])
-    assert (pul[:, 0] >= -1e-9).all() and pul[:, 0].max() == pytest.approx(20.0, abs=1e-6)
+    assert pul[0] == pytest.approx([0, 0]) and pul[-1] == pytest.approx([0, 30.0])
+    assert (pul[:, 0] >= -1e-9).all() and pul[:, 0].max() == pytest.approx(22.0, abs=1e-6)
 
 
 def test_prilis_kratka_stena_je_odmitnuta():
     with pytest.raises(ValueError):
         t.pulprofil(t.Parametry(vyska=14.0))
+
+
+def test_prilis_uzky_spodek_pro_kapsu_je_odmitnut():
+    with pytest.raises(ValueError):
+        t.pulprofil(t.Parametry(hloubka=34.0, r_spodek=8.0))
 
 
 def test_tyc_kratsi_nez_hloubka_je_odmitnuta():
@@ -120,4 +156,4 @@ def test_dalsi_velikosti(velikost):
     assert m.is_watertight
     assert m.extents[0] == pytest.approx(p.delka, abs=0.05)
     assert t.prevesy(m)[1] == 0.0
-    assert m.bounds[1][2] == pytest.approx(p.vyska + 12.0)
+    assert m.bounds[1][2] == pytest.approx(p.vyska - p.h_kapsa + p.v_trn)
