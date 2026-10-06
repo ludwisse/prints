@@ -38,10 +38,23 @@ def test_hlava_trnu_je_plochá_se_srazenou_hranou(tvar):
     assert np.hypot(pod[:, 0], pod[:, 1]).max() == pytest.approx(p.d_trn / 2, abs=0.001)
 
 
-def test_pata_trnu_je_zaoblena(tvar):
+def test_pata_trnu_je_cisty_kolmy_roh(tvar):
     p, m = tvar
+    assert p.r_paty == 0.0
+    z_dno = p.vyska - p.h_kapsa
+    for dz in (0.05, 0.3, 1.0, 3.0):
+        sek = m.section(plane_origin=[0, 0, z_dno + dz], plane_normal=[0, 0, 1])
+        r = np.hypot(sek.vertices[:, 0], sek.vertices[:, 1])
+        # pata bez zaoblení: poloměr trnu je i těsně nad dnem přesně d_trn / 2
+        assert r[r < 9].max() == pytest.approx(p.d_trn / 2, abs=0.002)
+
+
+def test_zaobleni_paty_jde_zapnout():
+    p = t.replace(t.Parametry(), r_paty=1.5)
+    m = t.vyrob(p)
     sek = m.section(plane_origin=[0, 0, p.vyska - p.h_kapsa + 0.1], plane_normal=[0, 0, 1])
-    assert np.hypot(sek.vertices[:, 0], sek.vertices[:, 1]).max() > p.d_trn / 2 + 0.8     # fillet R1,2 rozšiřuje trn u dna
+    r = np.hypot(sek.vertices[:, 0], sek.vertices[:, 1])
+    assert r[r < 9.5].max() > p.d_trn / 2 + 0.8
 
 
 def test_kapsa_kolem_trnu_ma_prumer_a_hloubku(tvar):
@@ -63,13 +76,13 @@ def test_kapsa_kolem_trnu_ma_prumer_a_hloubku(tvar):
 def test_kapsa_je_vetsi_nez_trn_a_dil_se_vejde(tvar):
     p, _ = tvar
     assert p.d_kapsa > p.d_trn + 2 * 2.0                # kolem trnu zbývá dosedací prstenec aspoň 2 mm
-    assert p.d_kapsa >= 20.6 + 0.4                      # odhad vnějšího Ø dílu + vůle (k ověření měřením)
+    assert p.d_kapsa == 20.5                            # zadáno
 
 
 def test_bearing_prstenec_mezi_trnem_a_stenou_dilu(tvar):
     p, _ = tvar
-    sirka = (20.6 - p.d_trn) / 2
-    assert sirka > 2.0                                  # zoubky dosedají na prstenec širší než 2 mm (při Ø dílu ≈ 20,6 mm asi 3,3 mm)
+    sirka = (p.d_kapsa - p.d_trn) / 2
+    assert sirka == pytest.approx(3.25)                 # dosedací prstenec mezi trnem a stěnou kapsy (Ø 14 → Ø 20,5)
 
 
 def test_rozmery_tyce(tvar):

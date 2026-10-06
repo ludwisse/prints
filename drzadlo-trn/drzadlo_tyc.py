@@ -5,8 +5,7 @@ a se zoubky nahoře; plochá dosedací plocha kolem trnu (mělká kapsa, na dně
 tlačí na zoubky. Dlaň tlačí shora, prsty tyč obejmou zepředu a zespodu, trn vyčnívá dolů z rovného spodku
 mezi prostředníčkem a prsteníčkem.
 
-POZOR: průměr kapsy (d_kapsa) je zatím jen odhad z fotografií, měřený rozměr dílu chybí. Odhad trnu z fotek
-vyšel 15,6 mm a byl o 1,6 mm vedle, proto změř vnější průměr dílu a případně uprav d_kapsa.
+Pata trnu u dna kapsy je čistě kolmá (bez zaoblení), průměr kapsy 20,5 mm.
 Tyč je v půdoryse „obdélník s půlkruhovými konci"; příčný řez je zploštělý (rovná dlaňová plocha,
 45° boky bez převisů, svislé stěny, zaoblená spodní hrana a rovný spodek).
 
@@ -36,8 +35,8 @@ class Parametry:
     d_trn: float = 14.0             # mm, průměr trnu (změřeno na skutečném protikusu)
     v_trn: float = 9.4              # mm, délka trnu od dna kapsy (změřeno na skutečném protikusu)
     srazeni: float = 1.0            # mm, sražení hrany hlavy trnu (45°)
-    r_paty: float = 1.2             # mm, zaoblení trnu u paty (nad dnem kapsy)
-    d_kapsa: float = 21.2           # mm, kapsa kolem trnu: ODHAD vnějšího průměru dílu (≈ 20,6 mm z fotek) + vůle; změř a uprav
+    r_paty: float = 0.0             # mm, zaoblení trnu u paty (0 = čistě kolmá pata bez rádiusu)
+    d_kapsa: float = 20.5           # mm, průměr kapsy kolem trnu (zadáno)
     h_kapsa: float = 1.5            # mm, hloubka kapsy; dno kapsy je dosedací plocha pro zoubky
     sraz_kapsa: float = 0.5         # mm, sražení ústí kapsy (zasouvání)
     x_trn: float = 0.0              # mm, poloha trnu podél tyče (0 = střed)
@@ -85,14 +84,19 @@ def kapsa(p):
 
 
 def trn(p):
-    """Trn s plochou sraženou hlavou a zaoblenou patou; stojí na dně kapsy a zasahuje 1 mm pod dno (do těla)."""
+    """Trn s plochou sraženou hlavou; stojí na dně kapsy a zasahuje 1 mm pod dno (do těla).
+
+    Pata je čistě kolmá (r_paty = 0), nebo zaoblená obloukem R = r_paty."""
     r_t = p.d_trn / 2
     z0 = p.vyska - p.h_kapsa                                   # dno kapsy
     z_hlava = z0 + p.v_trn
-    f = np.radians(np.linspace(-90, -180, 24))
-    pata = np.column_stack([r_t + p.r_paty + p.r_paty * np.cos(f), z0 + p.r_paty + p.r_paty * np.sin(f)])
-    body = np.vstack([[(0, z0 - 1.0)], [(r_t + p.r_paty, z0 - 1.0)], pata,
-                      [(r_t, z_hlava - p.srazeni), (r_t - p.srazeni, z_hlava), (0, z_hlava)]])
+    hlava = [(r_t, z_hlava - p.srazeni), (r_t - p.srazeni, z_hlava), (0, z_hlava)]
+    if p.r_paty > 0:
+        f = np.radians(np.linspace(-90, -180, 24))
+        pata = np.column_stack([r_t + p.r_paty + p.r_paty * np.cos(f), z0 + p.r_paty + p.r_paty * np.sin(f)])
+        body = np.vstack([[(0, z0 - 1.0)], [(r_t + p.r_paty, z0 - 1.0)], pata, hlava])
+    else:
+        body = np.array([(0, z0 - 1.0), (r_t, z0 - 1.0)] + hlava, float)
     m = mf.Manifold.revolve(mf.CrossSection([body]), p.segmentu)
     return m.translate((p.x_trn, 0.0, 0.0))
 
