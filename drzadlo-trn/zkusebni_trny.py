@@ -1,6 +1,6 @@
 """Zkušební destička s trny různých průměrů pro ověření lícování v otvoru dílu se závitem 9,29 mm.
 
-Pět trnů o délce 8 mm, průměry 15,2 / 15,4 / 15,6 / 15,8 / 16,0 mm (zleva doprava), stejně sražené hlavy.
+Pět trnů o délce 9,4 mm, průměry 13,6 / 13,8 / 14,0 / 14,2 / 14,4 mm (zleva doprava), stejně sražené hlavy.
 Vyzkoušej, který se zasune do otvoru s lehkým odporem a bez vůle, a ten průměr dej do `d_trn` v drzadlo_tyc.py.
 Použití: python zkusebni_trny.py
 """
@@ -10,8 +10,8 @@ import manifold3d as mf
 import numpy as np
 import trimesh
 
-PRUMERY = (15.2, 15.4, 15.6, 15.8, 16.0)
-DELKA = 8.0
+PRUMERY = (13.6, 13.8, 14.0, 14.2, 14.4)
+DELKA = 9.4
 SRAZENI = 1.0
 ROZTEC = 19.0
 DESKA = (ROZTEC * len(PRUMERY) + 4.0, 22.0, 3.0)

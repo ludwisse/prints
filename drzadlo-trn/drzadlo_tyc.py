@@ -1,12 +1,12 @@
 """Držadlo do pěsti: zploštělá příčná tyč s trnem pro zatlačení magnetického držáku hlásičů do země.
 
-Trn (Ø 15,6 × 8 mm) zapadá do otvoru v dílu se závitem 9,29 mm a se zoubky nahoře; plochá dosedací plocha
-kolem trnu (mělká kapsa Ø 21,2 mm, hloubka 1,5 mm, na dně prstenec mezi trnem a stěnou dílu) tlačí na zoubky.
-Dlaň tlačí shora, prsty tyč obejmou zepředu a zespodu, trn vyčnívá dolů z rovného spodku mezi prostředníčkem
-a prsteníčkem.
+Trn (Ø 14,0 × 9,4 mm, rozměry zadané podle skutečného protikusu) zapadá do otvoru v dílu se závitem 9,29 mm
+a se zoubky nahoře; plochá dosedací plocha kolem trnu (mělká kapsa, na dně prstenec mezi trnem a stěnou dílu)
+tlačí na zoubky. Dlaň tlačí shora, prsty tyč obejmou zepředu a zespodu, trn vyčnívá dolů z rovného spodku
+mezi prostředníčkem a prsteníčkem.
 
-Rozměry trnu a kapsy jsou ODHAD z fotografií (měřítko: závit 9,29 mm): díl se závitem Ø 20,6 mm, krček horní
-části Ø 15,8 mm, délka krčku 8,8 mm. Před tiskem ověř na skutečném dílu a případně uprav parametry.
+POZOR: průměr kapsy (d_kapsa) je zatím jen odhad z fotografií, měřený rozměr dílu chybí. Odhad trnu z fotek
+vyšel 15,6 mm a byl o 1,6 mm vedle, proto změř vnější průměr dílu a případně uprav d_kapsa.
 Tyč je v půdoryse „obdélník s půlkruhovými konci"; příčný řez je zploštělý (rovná dlaňová plocha,
 45° boky bez převisů, svislé stěny, zaoblená spodní hrana a rovný spodek).
 
@@ -33,11 +33,11 @@ class Parametry:
     r_dlan_zaobleni: float = 4.0    # mm, zaoblení mezi plochou a 45° bokem
     r_bok: float = 8.0              # mm, zaoblení mezi bokem a svislou stěnou
     r_spodek: float = 7.0           # mm, zaoblení spodní hrany (u prstů)
-    d_trn: float = 15.6             # mm, průměr trnu (krček dílu ≈ 15,8 mm, minus vůle pro tisk)
-    v_trn: float = 8.0              # mm, délka trnu od dna kapsy (krček ≈ 8,8 mm, trn nesmí dosednout na dno otvoru)
+    d_trn: float = 14.0             # mm, průměr trnu (změřeno na skutečném protikusu)
+    v_trn: float = 9.4              # mm, délka trnu od dna kapsy (změřeno na skutečném protikusu)
     srazeni: float = 1.0            # mm, sražení hrany hlavy trnu (45°)
     r_paty: float = 1.2             # mm, zaoblení trnu u paty (nad dnem kapsy)
-    d_kapsa: float = 21.2           # mm, kapsa kolem trnu: díl se závitem Ø ≈ 20,6 mm + vůle
+    d_kapsa: float = 21.2           # mm, kapsa kolem trnu: ODHAD vnějšího průměru dílu (≈ 20,6 mm z fotek) + vůle; změř a uprav
     h_kapsa: float = 1.5            # mm, hloubka kapsy; dno kapsy je dosedací plocha pro zoubky
     sraz_kapsa: float = 0.5         # mm, sražení ústí kapsy (zasouvání)
     x_trn: float = 0.0              # mm, poloha trnu podél tyče (0 = střed)

@@ -17,7 +17,7 @@ def tvar():
 
 # --- rozměry zadání ------------------------------------------------------------------------
 
-def test_trn_prumer_15_6_a_delka_8_od_dna_kapsy(tvar):
+def test_trn_prumer_14_a_delka_9_4_od_dna_kapsy(tvar):
     p, m = tvar
     z_dno = p.vyska - p.h_kapsa
     assert m.bounds[1][2] == pytest.approx(z_dno + p.v_trn)
@@ -25,6 +25,7 @@ def test_trn_prumer_15_6_a_delka_8_od_dna_kapsy(tvar):
     v = sek.vertices
     assert np.hypot(v[:, 0], v[:, 1]).max() == pytest.approx(p.d_trn / 2, abs=0.001)
     assert v[:, 1].max() - v[:, 1].min() == pytest.approx(p.d_trn, abs=0.01)
+    assert p.d_trn == 14.0 and p.v_trn == 9.4                              # zadání podle skutečného protikusu
 
 
 def test_hlava_trnu_je_plochá_se_srazenou_hranou(tvar):
@@ -59,17 +60,16 @@ def test_kapsa_kolem_trnu_ma_prumer_a_hloubku(tvar):
     assert rd.max() == pytest.approx(p.d_kapsa / 2, abs=0.01)
 
 
-def test_pro_dilu_se_zavitem_je_misto_v_kapse(tvar):
+def test_kapsa_je_vetsi_nez_trn_a_dil_se_vejde(tvar):
     p, _ = tvar
-    assert p.d_kapsa > 20.6 + 0.4                       # díl Ø ≈ 20,6 mm + vůle
-    assert p.d_trn < 15.8                               # krček horní části ≈ 15,8 mm: trn je o vůli menší
-    assert p.v_trn < 8.8                                # trn nesmí dosednout na dno otvoru
+    assert p.d_kapsa > p.d_trn + 2 * 2.0                # kolem trnu zbývá dosedací prstenec aspoň 2 mm
+    assert p.d_kapsa >= 20.6 + 0.4                      # odhad vnějšího Ø dílu + vůle (k ověření měřením)
 
 
 def test_bearing_prstenec_mezi_trnem_a_stenou_dilu(tvar):
     p, _ = tvar
     sirka = (20.6 - p.d_trn) / 2
-    assert sirka > 2.0                                  # zoubky dosedají na prstenec široký asi 2,5 mm
+    assert sirka > 2.0                                  # zoubky dosedají na prstenec širší než 2 mm (při Ø dílu ≈ 20,6 mm asi 3,3 mm)
 
 
 def test_rozmery_tyce(tvar):
@@ -114,7 +114,7 @@ def test_objem_odpovida_analyticky(tvar):
     puk = 2 * np.pi * abs(cr) * plocha
     lc = p.delka - p.hloubka
     ocekavano = 2 * plocha * lc + puk
-    trn = np.pi * 4.5 ** 2 * p.v_trn
+    trn = np.pi * (p.d_trn / 2) ** 2 * p.v_trn
     assert m.volume == pytest.approx(ocekavano + trn, rel=0.02)
 
 
